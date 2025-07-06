@@ -1,0 +1,13 @@
+name: Antivirus Disabled Alert
+type: any
+index: fleet-*
+filter:
+  - term:
+      'columns.antivirus': 'false'
+alert:
+  - "email"
+email:
+  - "your-email@example.com"
+smtp_host: "smtp.yourprovider.com"
+smtp_port: 587
+smtp_auth_file: "/opt/elastalert/smtp_auth.yaml"
