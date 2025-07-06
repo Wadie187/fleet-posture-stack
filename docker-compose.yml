@@ -1,0 +1,88 @@
+version: "3.8"
+
+services:
+  fleetdm:
+    image: fleetdm/fleet:v4.10.0
+    container_name: fleetdm
+    ports:
+      - "1337:1337"
+    environment:
+      - FLEET_ENROLL_SECRET=supersecret123  # Change this secret before prod!
+      - FLEET_SERVER_ADDRESS=http://localhost:1337
+      - FLEET_MYSQL_ADDRESS=mysql:3306
+      - FLEET_MYSQL_USERNAME=fleet
+      - FLEET_MYSQL_PASSWORD=fleetpass
+      - FLEET_MYSQL_DATABASE=fleetdm
+    depends_on:
+      - mysql
+    restart: unless-stopped
+    volumes:
+      - fleetdm-data:/var/lib/mysql
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: fleetdm
+      MYSQL_USER: fleet
+      MYSQL_PASSWORD: fleetpass
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: unless-stopped
+
+  opensearch:
+    image: opensearchproject/opensearch:2.9.0
+    container_name: opensearch
+    environment:
+      - cluster.name=opensearch-cluster
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - discovery.type=single-node
+      - network.host=0.0.0.0
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    restart: unless-stopped
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.9.0
+    container_name: opensearch-dashboards
+    ports:
+      - "5601:5601"
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+    depends_on:
+      - opensearch
+    restart: unless-stopped
+
+  elastalert2:
+    image: bitsensor/elastalert2:latest
+    container_name: elastalert2
+    volumes:
+      - ./elastalert:/opt/elastalert/rules
+    environment:
+      - ELASTALERT_DEBUG=true
+      - ELASTICSEARCH_HOST=opensearch
+      - ELASTICSEARCH_PORT=9200
+      - ELASTICSEARCH_PROTOCOL=http
+      - ELASTICSEARCH_USE_SSL=false
+      - ELASTICSEARCH_USERNAME=
+      - ELASTICSEARCH_PASSWORD=
+    depends_on:
+      - opensearch
+    ports:
+      - "3030:3030"
+    command: ["elastalert", "--config", "/opt/elastalert/config.yaml", "--verbose"]
+    restart: unless-stopped
+
+volumes:
+  fleetdm-data:
+  mysql-data:
+  opensearch-data:
