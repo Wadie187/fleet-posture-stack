@@ -1,0 +1,11 @@
+rules_folder: /opt/elastalert/rules
+run_every:
+  seconds: 60
+buffer_time:
+  minutes: 15
+es_host: opensearch
+es_port: 9200
+use_ssl: false
+writeback_index: elastalert_status
+alert_time_limit:
+  days: 2
